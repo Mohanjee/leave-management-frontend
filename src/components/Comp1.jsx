@@ -1,50 +1,28 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+
+const leaveTypes = [
+  { type: "Casual Leave", days: 15 },
+  { type: "Medical Leave", days: 20 },
+];
 
 export default function Comp1() {
-  const [selectedLeave, setSelectedLeave] = useState("");
+  const [selectedLeave, setSelectedLeave] = useState("Casual Leave");
   const [daysRequested, setDaysRequested] = useState(0);
-  const [availableLeaves, setAvailableLeaves] = useState([]);
+  const [availableLeaves, setAvailableLeaves] = useState(leaveTypes);
   const [history, setHistory] = useState([]);
 
-  useEffect(() => {
-    fetch("http://localhost:5000/leaves")
-      .then((res) => res.json())
-      .then((data) => {
-        setAvailableLeaves(data);
-        if (data.length > 0) {
-          setSelectedLeave(data[0].type); // Default to first available leave type
-        }
-      })
-      .catch((error) => console.error("Error fetching leaves:", error));
-  }, []);
-
   const handleApplyLeave = () => {
-    const requestBody = { type: selectedLeave, days: daysRequested };
-    console.log("Applying leave with:", requestBody);
-
-    fetch("http://localhost:5000/apply-leave", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody),
-    })
-      .then(async (res) => {
-        if (!res.ok) {
-          const errorData = await res.json();
-          throw new Error(errorData.message || "Failed to apply leave");
-        }
-        return res.json();
-      })
-      .then((data) => {
-        alert(data.message);
-        setAvailableLeaves((prev) =>
-          prev.map((leave) =>
-            leave.type === selectedLeave ? { ...leave, days: leave.days - daysRequested } : leave
-          )
-        );
-        setHistory([...history, { type: selectedLeave, days: daysRequested, date: new Date().toLocaleDateString() }]);
-        setDaysRequested(0);
-      })
-      .catch((error) => console.error("Error applying leave:", error));
+    const leaveIndex = availableLeaves.findIndex((leave) => leave.type === selectedLeave);
+    if (leaveIndex !== -1 && daysRequested > 0 && availableLeaves[leaveIndex].days >= daysRequested) {
+      const updatedLeaves = [...availableLeaves];
+      updatedLeaves[leaveIndex] = {
+        ...updatedLeaves[leaveIndex],
+        days: updatedLeaves[leaveIndex].days - daysRequested,
+      };
+      setAvailableLeaves(updatedLeaves);
+      setHistory([...history, { type: selectedLeave, days: daysRequested, date: new Date().toLocaleDateString() }]);
+      setDaysRequested(0);
+    }
   };
 
   return (
@@ -53,7 +31,7 @@ export default function Comp1() {
       <div>
         <label>Select Leave Type:</label>
         <select value={selectedLeave} onChange={(e) => setSelectedLeave(e.target.value)}>
-          {availableLeaves.map((leave) => (
+          {leaveTypes.map((leave) => (
             <option key={leave.type} value={leave.type}>{leave.type}</option>
           ))}
         </select>
